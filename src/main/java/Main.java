@@ -5,9 +5,12 @@ import ocr.AmazonTextractor;
 import ocr.ProcessedImage;
 import pdf.PDFDocument;
 import pdf.PdfCreator;
+import processing.FileToImage;
+import processing.PageDetection;
 import upload.DropboxUploader;
 import org.apache.commons.cli.*;
 
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -35,6 +38,7 @@ public class Main {
                     .filter(Files::isRegularFile)
                     .filter(f -> f.getFileName().toString().endsWith(".jpg"))
                     .map(f -> f.toFile())
+                    .sorted()
                     .collect(Collectors.toList());
             return new ApplicationArguments(
                     cmd.getOptionValue("dropbox-auth-token"),
@@ -57,16 +61,24 @@ public class Main {
         return null;
     }
 
-    public static void main(String[] args) throws DbxException, IOException {
+    public static void main(String[] args) throws DbxException, IOException, InterruptedException {
         ApplicationArguments arguments = parseCommand(args);
 
-        AmazonTextractor textractor = new AmazonTextractor();
-        List<ProcessedImage> processedImages = textractor.processImages(arguments.files.inputImages);
+        ArrayList<BufferedImage> images =
+                FileToImage.mapToImage(arguments.files.inputImages);
+        images.forEach(FileToImage::enhanceContrast);
+        PageDetection.removeBlankPages(images);
 
-        PdfCreator pdfCreator = new PdfCreator();
-        PDFDocument pdf = pdfCreator.createPdf(processedImages);
+        System.out.println("Images after processing: " + images.size());
+        if (images.size() > 0) {
+            AmazonTextractor textractor = new AmazonTextractor();
+            List<ProcessedImage> processedImages = textractor.processImages(images, false);
 
-        DropboxUploader uploader = new DropboxUploader(arguments.dropboxAuthToken);
-        uploader.upload(pdf, arguments.files.outputDocumentName);
+            PdfCreator pdfCreator = new PdfCreator();
+            PDFDocument pdf = pdfCreator.createPdf(processedImages);
+
+            DropboxUploader uploader = new DropboxUploader(arguments.dropboxAuthToken);
+            uploader.upload(pdf, arguments.files.outputDocumentName);
+        }
     }
 }

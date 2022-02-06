@@ -8,41 +8,32 @@ import pdf.TextLine;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
 public class AmazonTextractor {
 
-    public List<ProcessedImage> processImages(List<File> images) throws IOException {
+    public List<ProcessedImage> processImages(List<BufferedImage> images, boolean dryrun) throws IOException {
         List<ProcessedImage> processedImages = new ArrayList<>();
-        for (File imageName: images) {
-            List<TextLine> lines = null;
-            try (InputStream in = new FileInputStream(imageName)) {
-                // extract Text
-                lines = extractText(ByteBuffer.wrap(IOUtils.toByteArray(in)));
+        for (BufferedImage image: images) {
+            if (dryrun) {
+                processedImages.add(new ProcessedImage(image, new ArrayList<>()));
+            } else {
+                List<TextLine> lines = extractText(ByteBuffer.wrap(toByteArray(image, "jpg")));
+                processedImages.add(new ProcessedImage(image, lines));
             }
-
-            //Get Image
-            BufferedImage image = getImage(imageName);
-            processedImages.add(new ProcessedImage(image, lines));
         }
         return processedImages;
     }
 
-    private BufferedImage getImage(File documentName) throws IOException {
-
-        BufferedImage image = null;
-
-        try(InputStream in = new FileInputStream(documentName)) {
-            image = ImageIO.read(in);
-        }
-
-        return image;
+    public static byte[] toByteArray(BufferedImage bi, String format)
+            throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(bi, format, baos);
+        byte[] bytes = baos.toByteArray();
+        return bytes;
     }
 
     private List<TextLine> extractText(ByteBuffer imageBytes) {
