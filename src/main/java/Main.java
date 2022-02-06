@@ -2,15 +2,13 @@ import com.dropbox.core.DbxException;
 import model.ApplicationArguments;
 import model.InAndOutFile;
 import ocr.AmazonTextractor;
-import ocr.ProcessedImage;
+import org.apache.commons.cli.*;
+import pdf.ImageType;
 import pdf.PDFDocument;
-import pdf.PdfCreator;
 import processing.FileToImage;
 import processing.PageDetection;
 import upload.DropboxUploader;
-import org.apache.commons.cli.*;
 
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -64,19 +62,16 @@ public class Main {
     public static void main(String[] args) throws DbxException, IOException, InterruptedException {
         ApplicationArguments arguments = parseCommand(args);
 
-        ArrayList<BufferedImage> images =
-                FileToImage.mapToImage(arguments.files.inputImages);
-        images.forEach(FileToImage::enhanceContrast);
-        PageDetection.removeBlankPages(images);
+        PDFDocument pdf = new PDFDocument();
 
-        System.out.println("Images after processing: " + images.size());
-        if (images.size() > 0) {
-            AmazonTextractor textractor = new AmazonTextractor();
-            List<ProcessedImage> processedImages = textractor.processImages(images, false);
+        arguments.files.inputImages.stream()
+                .map(FileToImage::getImage)
+                .map(FileToImage::enhanceContrast)
+                .filter(PageDetection::isNotBlank)
+                .map(i -> AmazonTextractor.processImage(i, false))
+                .forEach(pi -> pdf.addPage(pi.image, ImageType.JPEG, pi.lines));
 
-            PdfCreator pdfCreator = new PdfCreator();
-            PDFDocument pdf = pdfCreator.createPdf(processedImages);
-
+        if (pdf.size() > 0) {
             DropboxUploader uploader = new DropboxUploader(arguments.dropboxAuthToken);
             uploader.upload(pdf, arguments.files.outputDocumentName);
         }

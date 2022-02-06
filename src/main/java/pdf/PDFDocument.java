@@ -24,7 +24,7 @@ public class PDFDocument {
 
     private PDDocument document;
 
-    public PDFDocument(){
+    public PDFDocument() {
         this.document = new PDDocument();
     }
 
@@ -39,16 +39,16 @@ public class PDFDocument {
 
         float width = page.getMediaBox().getWidth();
 
-        PDPageContentStream contentStream = new PDPageContentStream(document, page, PDPageContentStream.AppendMode.APPEND, false );
+        PDPageContentStream contentStream = new PDPageContentStream(document, page, PDPageContentStream.AppendMode.APPEND, false);
         contentStream.setRenderingMode(RenderingMode.NEITHER);
 
-        for (TextLine cline : lines){
-            FontInfo fontInfo = calculateFontSize(cline.text, (float)cline.width*width, (float)cline.height*height);
+        for (TextLine cline : lines) {
+            FontInfo fontInfo = calculateFontSize(cline.text, (float) cline.width * width, (float) cline.height * height);
 
             //System.out.println("FontSize: " + fontInfo.fontSize + " => for text: " + cline.text);
             contentStream.beginText();
             contentStream.setFont(this.font, fontInfo.fontSize);
-            contentStream.newLineAtOffset((float)cline.left*width, (float)(height-height*cline.top-fontInfo.textHeight));
+            contentStream.newLineAtOffset((float) cline.left * width, (float) (height - height * cline.top - fontInfo.textHeight));
             contentStream.showText(cline.text);
             contentStream.endText();
         }
@@ -64,15 +64,14 @@ public class PDFDocument {
         float textWidth = font.getStringWidth(text) / 1000 * fontSize;
         float textHeight = font.getFontDescriptor().getFontBoundingBox().getHeight() / 1000 * fontSize;
 
-        if(textWidth > bbWidth){
-            while(textWidth > bbWidth){
+        if (textWidth > bbWidth) {
+            while (textWidth > bbWidth) {
                 fontSize -= 1;
                 textWidth = font.getStringWidth(text) / 1000 * fontSize;
                 textHeight = font.getFontDescriptor().getFontBoundingBox().getHeight() / 1000 * fontSize;
             }
-        }
-        else if(textWidth < bbWidth){
-            while(textWidth < bbWidth){
+        } else if (textWidth < bbWidth) {
+            while (textWidth < bbWidth) {
                 fontSize += 1;
                 textWidth = font.getStringWidth(text) / 1000 * fontSize;
                 textHeight = font.getFontDescriptor().getFontBoundingBox().getHeight() / 1000 * fontSize;
@@ -89,7 +88,7 @@ public class PDFDocument {
         return fi;
     }
 
-    public void addPage(BufferedImage image, ImageType imageType, List<TextLine> lines) throws IOException {
+    public void addPage(BufferedImage image, ImageType imageType, List<TextLine> lines) {
 
         float width = image.getWidth();
         float height = image.getHeight();
@@ -101,29 +100,36 @@ public class PDFDocument {
 
         PDImageXObject pdImage = null;
 
-        if(imageType == ImageType.JPEG){
-            pdImage = JPEGFactory.createFromImage(this.document, image);
+        try {
+            if (imageType == ImageType.JPEG) {
+                pdImage = JPEGFactory.createFromImage(this.document, image);
+            } else {
+                pdImage = LosslessFactory.createFromImage(this.document, image);
+            }
+
+            PDPageContentStream contentStream = new PDPageContentStream(document, page);
+
+            contentStream.drawImage(pdImage, 0, 0);
+
+            contentStream.setRenderingMode(RenderingMode.NEITHER);
+
+            for (TextLine cline : lines) {
+                FontInfo fontInfo = calculateFontSize(cline.text, (float) cline.width * width, (float) cline.height * height);
+                contentStream.beginText();
+                contentStream.setFont(this.font, fontInfo.fontSize);
+                contentStream.newLineAtOffset((float) cline.left * width, (float) (height - height * cline.top - fontInfo.textHeight));
+                contentStream.showText(cline.text);
+                contentStream.endText();
+            }
+
+            contentStream.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
-        else {
-            pdImage = LosslessFactory.createFromImage(this.document, image);
-        }
+    }
 
-        PDPageContentStream contentStream = new PDPageContentStream(document, page);
-
-        contentStream.drawImage(pdImage, 0, 0);
-
-        contentStream.setRenderingMode(RenderingMode.NEITHER);
-
-        for (TextLine cline : lines){
-            FontInfo fontInfo = calculateFontSize(cline.text, (float)cline.width*width, (float)cline.height*height);
-            contentStream.beginText();
-            contentStream.setFont(this.font, fontInfo.fontSize);
-            contentStream.newLineAtOffset((float)cline.left*width, (float)(height-height*cline.top-fontInfo.textHeight));
-            contentStream.showText(cline.text);
-            contentStream.endText();
-        }
-
-        contentStream.close();
+    public int size() {
+        return this.document.getNumberOfPages();
     }
 
     public void save(String path) throws IOException {

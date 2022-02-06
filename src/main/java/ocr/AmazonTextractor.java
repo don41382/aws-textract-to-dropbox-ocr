@@ -3,19 +3,19 @@ package ocr;
 import com.amazonaws.services.textract.AmazonTextract;
 import com.amazonaws.services.textract.AmazonTextractClientBuilder;
 import com.amazonaws.services.textract.model.*;
-import com.amazonaws.util.IOUtils;
 import pdf.TextLine;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
 public class AmazonTextractor {
 
-    public List<ProcessedImage> processImages(List<BufferedImage> images, boolean dryrun) throws IOException {
+    public List<ProcessedImage> processImages(List<BufferedImage> images, boolean dryrun) {
         List<ProcessedImage> processedImages = new ArrayList<>();
         for (BufferedImage image: images) {
             if (dryrun) {
@@ -28,15 +28,27 @@ public class AmazonTextractor {
         return processedImages;
     }
 
-    public static byte[] toByteArray(BufferedImage bi, String format)
-            throws IOException {
+    public static ProcessedImage processImage(BufferedImage image, boolean dryrun) {
+        if (dryrun) {
+            return new ProcessedImage(image, new ArrayList<>());
+        } else {
+            List<TextLine> lines = extractText(ByteBuffer.wrap(toByteArray(image, "jpg")));
+            return new ProcessedImage(image, lines);
+        }
+    }
+
+    public static byte[] toByteArray(BufferedImage bi, String format)  {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ImageIO.write(bi, format, baos);
+        try {
+            ImageIO.write(bi, format, baos);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         byte[] bytes = baos.toByteArray();
         return bytes;
     }
 
-    private List<TextLine> extractText(ByteBuffer imageBytes) {
+    private static List<TextLine> extractText(ByteBuffer imageBytes) {
 
         AmazonTextract client = AmazonTextractClientBuilder.defaultClient();
 

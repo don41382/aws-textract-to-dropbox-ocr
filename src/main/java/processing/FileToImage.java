@@ -3,10 +3,7 @@ package processing;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.awt.image.RescaleOp;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,17 +17,22 @@ public class FileToImage {
         return images;
     }
 
-    public static void enhanceContrast(BufferedImage image) {
+    public static BufferedImage enhanceContrast(BufferedImage image) {
         RescaleOp rescaleOp = new RescaleOp(1.2f, 10, null);
         rescaleOp.filter(image, image);
+        return image;
     }
 
-    private static BufferedImage getImage(File file) throws IOException {
+    public static BufferedImage getImage(File file) {
 
         BufferedImage image = null;
 
         try(InputStream in = new FileInputStream(file)) {
             image = ImageIO.read(in);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
 
         return image;
