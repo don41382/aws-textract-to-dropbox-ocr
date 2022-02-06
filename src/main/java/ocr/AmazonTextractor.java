@@ -15,19 +15,6 @@ import java.util.List;
 
 public class AmazonTextractor {
 
-    public List<ProcessedImage> processImages(List<BufferedImage> images, boolean dryrun) {
-        List<ProcessedImage> processedImages = new ArrayList<>();
-        for (BufferedImage image: images) {
-            if (dryrun) {
-                processedImages.add(new ProcessedImage(image, new ArrayList<>()));
-            } else {
-                List<TextLine> lines = extractText(ByteBuffer.wrap(toByteArray(image, "jpg")));
-                processedImages.add(new ProcessedImage(image, lines));
-            }
-        }
-        return processedImages;
-    }
-
     public static ProcessedImage processImage(BufferedImage image, boolean dryrun) {
         if (dryrun) {
             return new ProcessedImage(image, new ArrayList<>());

@@ -1,5 +1,5 @@
 import com.dropbox.core.DbxException;
-import model.ApplicationArguments;
+import parser.ApplicationArguments;
 import ocr.AmazonTextractor;
 import parser.ArgumentParser;
 import pdf.ImageType;

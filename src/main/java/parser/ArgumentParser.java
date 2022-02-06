@@ -1,7 +1,5 @@
 package parser;
 
-import model.ApplicationArguments;
-import model.InAndOutFile;
 import org.apache.commons.cli.*;
 
 import java.io.File;
